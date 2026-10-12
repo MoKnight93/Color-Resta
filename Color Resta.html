@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Color Resta</title>
+  <meta name="author" content="Mohamed Samir">
+  <link rel="icon" href="https://images.icon-icons.com/91/PNG/512/color_wheel_16443.png">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@500&family=Unbounded:wght@700&display=swap">
+  <style>
+    :root {
+      --stage: #000000;
+      --ink-light: #FAFAFA;
+      --ink-dark: #0A0A0A;
+      --label: var(--ink-light);
+      --orb: #FF2E63;
+      --font-display: "Unbounded", "Arial Rounded MT Bold", "Trebuchet MS", system-ui, sans-serif;
+      --font-mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+      color-scheme: dark;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      background-color: var(--stage);
+      color: var(--label);
+      font-family: var(--font-mono);
+      transition: background-color .4s ease, color .3s ease;
+    }
+
+    .stage {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 24px;
+      padding-block: 20px;
+      padding-inline: 20px;
+    }
+
+    .top {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 16px;
+    }
+
+    .hint {
+      margin: 0;
+      min-width: 0;
+      text-align: right;
+      font: 500 .75rem/1.3 var(--font-mono);
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      transition: opacity .5s ease;
+    }
+
+    .seen .hint {
+      opacity: 0;
+    }
+
+    .orb {
+      --orb-size: clamp(56px, 14vw, 88px);
+      position: relative;
+      flex: none;
+      width: var(--orb-size);
+      height: var(--orb-size);
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background-color: var(--orb);
+      box-shadow: 0 0 36px 2px color-mix(in srgb, var(--orb) 50%, transparent);
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform .25s cubic-bezier(.34, 1.56, .64, 1), background-color .3s ease, box-shadow .3s ease;
+    }
+
+    .orb::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 2px solid var(--orb);
+      border-radius: 50%;
+      pointer-events: none;
+      animation: ping 2s ease-out infinite;
+    }
+
+    .seen .orb::after {
+      animation: none;
+      opacity: 0;
+    }
+
+    @media (hover: hover) {
+      .orb:hover {
+        transform: scale(1.1);
+      }
+    }
+
+    .orb:active {
+      transform: scale(.94);
+    }
+
+    .orb:focus-visible {
+      outline: 3px solid var(--label);
+      outline-offset: 6px;
+    }
+
+    @keyframes ping {
+      0% {
+        transform: scale(1);
+        opacity: .8;
+      }
+
+      70%,
+      100% {
+        transform: scale(1.8);
+        opacity: 0;
+      }
+    }
+
+    .caption {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .name {
+      margin: 0;
+      max-width: 100%;
+      font: 700 clamp(1.5rem, 6vw, 3.75rem)/1.08 var(--font-display);
+      letter-spacing: -.02em;
+      text-wrap: balance;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 8px 20px;
+    }
+
+    .hex {
+      font: 500 .875rem/1 var(--font-mono);
+      letter-spacing: .08em;
+    }
+
+    .reset {
+      padding: 0;
+      border: 0;
+      background: none;
+      color: inherit;
+      font: 500 .875rem/1 var(--font-mono);
+      letter-spacing: .04em;
+      text-decoration: underline;
+      text-underline-offset: 4px;
+      cursor: pointer;
+    }
+
+    .reset:focus-visible {
+      outline: 2px solid currentColor;
+      outline-offset: 4px;
+      border-radius: 2px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+      *,
+      *::before,
+      *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="stage" id="stage">
+    <header class="top">
+      <p class="hint">Hover or tap the circle &rarr;</p>
+      <button class="orb" id="orb" type="button" aria-label="Change the background color"></button>
+    </header>
+    <div class="caption">
+      <p class="name" id="name" aria-live="polite">Dark Mode</p>
+      <div class="meta">
+        <span class="hex" id="hex">#000000</span>
+        <button class="reset" id="reset" type="button" hidden>Back to black</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var BLACK = { hex: '#000000', name: 'Dark Mode' };
+      var PALETTE = [
+        { hex: '#7A1F1F', name: 'Old Brick Oven' },
+        { hex: '#990000', name: 'Ketchup Emergency' },
+        { hex: '#FF0000', name: 'Fire Truck' },
+        { hex: '#BD7575', name: 'Wilted Valentine' },
+        { hex: '#D6705C', name: 'Salmon Nigiri' },
+        { hex: '#FFAA99', name: 'Shrimp Cocktail' },
+        { hex: '#FF6B4A', name: 'Sunburnt Nose' },
+        { hex: '#CC4400', name: 'Pumpkin Rage' },
+        { hex: '#FF7A00', name: 'Traffic Cone' },
+        { hex: '#994D00', name: 'Rusty Bike' },
+        { hex: '#FFB366', name: 'Mango Mood Swing' },
+        { hex: '#DECCBA', name: 'Oat Milk' },
+        { hex: '#FFCC99', name: 'Apricot Nap' },
+        { hex: '#675532', name: 'Muddy Boots' },
+        { hex: '#BD830F', name: 'Mustard Emergency' },
+        { hex: '#FFAA00', name: 'Marmalade Mess' },
+        { hex: '#BDA575', name: 'Cargo Shorts' },
+        { hex: '#7A6B1F', name: 'Olive Oil Slick' },
+        { hex: '#FFD60A', name: 'Banana Alarm' },
+        { hex: '#D6C25C', name: 'Fake Gold Medal' },
+        { hex: '#8E8E0B', name: 'Pea Soup Fog' },
+        { hex: '#BDBD0F', name: 'Old Highlighter' },
+        { hex: '#FFFF00', name: 'Highlighter Leak' },
+        { hex: '#FFFF66', name: 'Lemon Pudding' },
+        { hex: '#F7F7A1', name: 'Custard Nap' },
+        { hex: '#C2D65C', name: 'Pear Drop' },
+        { hex: '#AAFF00', name: 'Tennis Ball' },
+        { hex: '#A3E635', name: 'Lime Gossip' },
+        { hex: '#4D6732', name: 'Moss Gossip' },
+        { hex: '#B3CD98', name: 'Sage Advice' },
+        { hex: '#4D9900', name: 'Pickle Jar' },
+        { hex: '#4D7A1F', name: 'Spinach Smoothie' },
+        { hex: '#80AC53', name: 'Grass Stain' },
+        { hex: '#CCFF99', name: 'Lime Sorbet' },
+        { hex: '#85D65C', name: 'Kiwi Ambush' },
+        { hex: '#80FF66', name: 'Radioactive Salad' },
+        { hex: '#00FF00', name: 'Terminal Green' },
+        { hex: '#00CC22', name: 'Broccoli Rebellion' },
+        { hex: '#A1F7AF', name: 'Mojito Shrug' },
+        { hex: '#D6F5E0', name: 'Minty Fresh Apology' },
+        { hex: '#1F7A3D', name: 'Forest Gremlin' },
+        { hex: '#009933', name: 'Shamrock Sipper' },
+        { hex: '#00FF55', name: 'Slime Time' },
+        { hex: '#00D26A', name: 'Frog Pond' },
+        { hex: '#00FF80', name: 'Alien Juice' },
+        { hex: '#75BD99', name: 'Eucalyptus Spa' },
+        { hex: '#326755', name: 'Deep Swamp Thought' },
+        { hex: '#0FBD83', name: 'Emerald Flex' },
+        { hex: '#33FFBB', name: 'Toothpaste Rave' },
+        { hex: '#0B8E78', name: 'Pool Noodle' },
+        { hex: '#2DD4BF', name: 'Cucumber Spa' },
+        { hex: '#00FFFF', name: 'Dolphin Wi-Fi' },
+        { hex: '#75BDBD', name: 'Sea Glass' },
+        { hex: '#99FFFF', name: 'Glacier Mint' },
+        { hex: '#22D3EE', name: 'Ice Pop' },
+        { hex: '#1F6B7A', name: 'Deep Sea Rumor' },
+        { hex: '#3399CC', name: 'Denim Jacket' },
+        { hex: '#00A3FF', name: 'Cartoon Sky' },
+        { hex: '#CCE6FF', name: 'Cloud Cushion' },
+        { hex: '#0B4D8E', name: 'Submarine Navy' },
+        { hex: '#324467', name: 'Ink Pen Leak' },
+        { hex: '#0F49BD', name: 'Royal Meltdown' },
+        { hex: '#3377FF', name: 'Blue Screen of Joy' },
+        { hex: '#001999', name: 'Midnight Oil' },
+        { hex: '#98A1CD', name: 'Baby Blue Sweater' },
+        { hex: '#3D5AFE', name: 'Monday Blue' },
+        { hex: '#818CF8', name: 'Sleepy Denim' },
+        { hex: '#1F1F7A', name: 'Wednesday Indigo' },
+        { hex: '#0F0FBD', name: 'Ultramarine Vibes' },
+        { hex: '#0000FF', name: 'Unclicked Link' },
+        { hex: '#8175BD', name: 'Lavender Latte' },
+        { hex: '#7C4DFF', name: 'Grape Soda' },
+        { hex: '#5A428A', name: 'Wizard Robe' },
+        { hex: '#B371F4', name: 'Orchid Sass' },
+        { hex: '#620B8E', name: 'Twilight Eggplant' },
+        { hex: '#830FBD', name: 'Royal Grape Jelly' },
+        { hex: '#AA00FF', name: 'UV Light Attack' },
+        { hex: '#D6ADEB', name: 'Lilac Nap' },
+        { hex: '#9D53AC', name: 'Plum Drama' },
+        { hex: '#D946EF', name: 'Disco Plum' },
+        { hex: '#FF00FF', name: 'Magenta Hiccup' },
+        { hex: '#FF99FF', name: 'Cotton Candy Tax' },
+        { hex: '#67325E', name: 'Blackberry Bruise' },
+        { hex: '#BD0FA0', name: 'Beet Juice Spill' },
+        { hex: '#FF00D4', name: 'Neon Lipstick' },
+        { hex: '#FF66E5', name: 'Flamingo Lawn' },
+        { hex: '#990066', name: 'Raspberry Drama' },
+        { hex: '#FF00AA', name: 'Hot Pink Panic' },
+        { hex: '#D65CAD', name: 'Taffy Pull' },
+        { hex: '#CD98B3', name: 'Rose Quartz Nap' },
+        { hex: '#AC5380', name: 'Mauve Mood Board' },
+        { hex: '#FF99CC', name: 'Marshmallow Blush' },
+        { hex: '#FF4FA3', name: 'Bubblegum Crash' },
+        { hex: '#BD0F49', name: 'Cherry Pop' },
+        { hex: '#FFCCDD', name: 'Pink Pancake' },
+        { hex: '#FF2E63', name: 'Angry Strawberry' },
+        { hex: '#67323B', name: 'Red Wine Tuesday' },
+        { hex: '#F47187', name: 'Watermelon Gossip' },
+        { hex: '#4D4D4D', name: 'Charcoal Mood' },
+        { hex: '#999999', name: 'Elevator Gray' }
+      ];
+
+      function channel(hex, start) {
+        var v = parseInt(hex.slice(start, start + 2), 16) / 255;
+        return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+      }
+      function luminance(hex) {
+        return 0.2126 * channel(hex, 1) + 0.7152 * channel(hex, 3) + 0.0722 * channel(hex, 5);
+      }
+      function needsDarkInk(hex) { return luminance(hex) > 0.179; }
+
+      function toLab(hex) {
+        var r = channel(hex, 1), g = channel(hex, 3), b = channel(hex, 5);
+        var x = (0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047;
+        var y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        var z = (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883;
+        function f(t) { return t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116; }
+        return [116 * f(y) - 16, 500 * (f(x) - f(y)), 200 * (f(y) - f(z))];
+      }
+      function labDistance(hexA, hexB) {
+        var a = toLab(hexA), b = toLab(hexB);
+        return Math.sqrt(Math.pow(a[0] - b[0], 2) + Math.pow(a[1] - b[1], 2) + Math.pow(a[2] - b[2], 2));
+      }
+
+      function makeDeck(colors, random, minGap) {
+        var queue = [];
+        function refill() {
+          queue = colors.slice();
+          for (var i = queue.length - 1; i > 0; i--) {
+            var j = Math.floor(random() * (i + 1));
+            var t = queue[i]; queue[i] = queue[j]; queue[j] = t;
+          }
+        }
+        return function draw(prev) {
+          if (!queue.length) refill();
+          var pick = queue.length - 1;
+          if (prev) {
+            var best = -1;
+            for (var k = queue.length - 1; k >= 0; k--) {
+              var d = labDistance(queue[k].hex, prev.hex);
+              if (d >= minGap) { pick = k; break; }
+              if (d > best) { best = d; pick = k; }
+            }
+          }
+          return queue.splice(pick, 1)[0];
+        };
+      }
+
+      var root = document.documentElement;
+      var stage = document.getElementById('stage');
+      var orb = document.getElementById('orb');
+      var nameEl = document.getElementById('name');
+      var hexEl = document.getElementById('hex');
+      var resetBtn = document.getElementById('reset');
+
+      var draw = makeDeck(PALETTE, Math.random, 28);
+      var bg = BLACK;
+      var next = draw(null);
+      var lastEnter = -1e9;
+
+      function paint() {
+        root.style.setProperty('--stage', bg.hex);
+        root.style.setProperty('--label', needsDarkInk(bg.hex) ? 'var(--ink-dark)' : 'var(--ink-light)');
+        root.style.setProperty('--orb', next.hex);
+        nameEl.textContent = bg.name;
+        hexEl.textContent = bg.hex;
+        resetBtn.hidden = bg === BLACK;
+        orb.setAttribute('aria-label', 'Change the background to ' + next.name);
+      }
+
+      function change() {
+        bg = next;
+        next = draw(bg);
+        stage.classList.add('seen');
+        paint();
+      }
+
+      orb.addEventListener('pointerenter', function (e) {
+        if (e.pointerType === 'touch') return;
+        lastEnter = performance.now();
+        change();
+      });
+      orb.addEventListener('click', function () {
+        if (performance.now() - lastEnter < 400) return;
+        change();
+      });
+      resetBtn.addEventListener('click', function () {
+        bg = BLACK;
+        paint();
+        orb.focus({ preventScroll: true });
+      });
+
+      paint();
+    })();
+  </script>
+</body>
+
+</html>
