@@ -1,2 +1,2 @@
 # Color Resta
-Color palette changes by hover or click.
+Color Palette Changes by Hover or Click
