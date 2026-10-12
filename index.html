@@ -37,6 +37,9 @@
       color: var(--label);
       font-family: var(--font-mono);
       transition: background-color .4s ease, color .3s ease;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
     }
 
     .stage {
@@ -399,6 +402,51 @@
         bg = BLACK;
         paint();
         orb.focus({ preventScroll: true });
+      });
+
+      var lastToggle = -1e9;
+      var lastTap = { t: -1e9, x: 0, y: 0 };
+
+      function isFullscreen() {
+        return !!(document.fullscreenElement || document.webkitFullscreenElement);
+      }
+
+      function toggleFullscreen() {
+        var now = performance.now();
+        if (now - lastToggle < 500) return;
+        lastToggle = now;
+
+        var el = document.documentElement;
+        var result;
+        if (isFullscreen()) {
+          var exit = document.exitFullscreen || document.webkitExitFullscreen;
+          if (exit) result = exit.call(document);
+        } else {
+          var req = el.requestFullscreen || el.webkitRequestFullscreen;
+          if (req) result = req.call(el);
+        }
+        if (result && typeof result.catch === 'function') result.catch(function () { });
+      }
+
+      function onControl(target) {
+        return target && target.closest && target.closest('.orb, .reset');
+      }
+
+      document.addEventListener('dblclick', function (e) {
+        if (onControl(e.target)) return;
+        toggleFullscreen();
+      });
+
+      document.addEventListener('pointerup', function (e) {
+        if (e.pointerType !== 'touch' || onControl(e.target)) return;
+        var now = performance.now();
+        var close = Math.abs(e.clientX - lastTap.x) < 40 && Math.abs(e.clientY - lastTap.y) < 40;
+        if (now - lastTap.t < 300 && close) {
+          lastTap.t = -1e9;
+          toggleFullscreen();
+        } else {
+          lastTap = { t: now, x: e.clientX, y: e.clientY };
+        }
       });
 
       paint();
